@@ -1,0 +1,105 @@
+{
+  "name": "churn-production-ml-pipeline",
+  "tags": {
+    "project": "churn-production-ml",
+    "owner": "ajay"
+  },
+  "job_clusters": [
+    {
+      "job_cluster_key": "churn_job_cluster",
+      "new_cluster": {
+        "spark_version": "15.4.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 1,
+        "spark_conf": {
+          "spark.databricks.delta.preview.enabled": "true"
+        },
+        "data_security_mode": "SINGLE_USER"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_key": "01_data_ingestion",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/01_data_ingestion"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 1800,
+      "max_retries": 1
+    },
+    {
+      "task_key": "02_feature_engineering",
+      "depends_on": [{ "task_key": "01_data_ingestion" }],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/02_feature_engineering"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 1800,
+      "max_retries": 1
+    },
+    {
+      "task_key": "03_training_and_tracking",
+      "depends_on": [{ "task_key": "02_feature_engineering" }],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/03_training_and_tracking"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 3600,
+      "max_retries": 1
+    },
+    {
+      "task_key": "04_model_registry",
+      "depends_on": [{ "task_key": "03_training_and_tracking" }],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/04_model_registry"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 1200,
+      "max_retries": 0
+    },
+    {
+      "task_key": "05_shap_explainability",
+      "depends_on": [{ "task_key": "04_model_registry" }],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/05_shap_explainability"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 1800,
+      "max_retries": 1
+    },
+    {
+      "task_key": "06_drift_detection",
+      "depends_on": [{ "task_key": "04_model_registry" }],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/06_drift_detection"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 3600,
+      "max_retries": 1
+    },
+    {
+      "task_key": "07_batch_scoring",
+      "depends_on": [
+        { "task_key": "05_shap_explainability" },
+        { "task_key": "06_drift_detection" }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/notebooks/07_batch_scoring"
+      },
+      "job_cluster_key": "churn_job_cluster",
+      "timeout_seconds": 1200,
+      "max_retries": 1
+    }
+  ],
+  "schedule": {
+    "quartz_cron_expression": "0 0 6 * * ?",
+    "timezone_id": "America/Chicago",
+    "pause_status": "PAUSED"
+  },
+  "max_concurrent_runs": 1,
+  "email_notifications": {
+    "on_failure": [],
+    "no_alert_for_skipped_runs": false
+  }
+}

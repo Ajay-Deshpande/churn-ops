@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Churn — Production ML with MLflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0E14;
+    --surface: #141822;
+    --surface-2: #1A1F2B;
+    --border: #262C3A;
+    --text: #E8EAED;
+    --text-dim: #8B93A7;
+    --text-faint: #5A6275;
+    --teal: #5EEAD4;
+    --teal-dim: #2DD4BF;
+    --amber: #F59E0B;
+    --red: #F87171;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    font-size: 16px;
+  }
+
+  ::selection { background: var(--teal-dim); color: #0B0E14; }
+
+  a { color: var(--teal); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+
+  code, .mono { font-family: var(--mono); }
+
+  /* ---------- HERO ---------- */
+  header.hero {
+    padding: 96px 0 64px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--teal);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 8px; height: 8px;
+    background: var(--teal);
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(94,234,212,0.15);
+  }
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    max-width: 760px;
+  }
+  .hero-sub {
+    margin-top: 20px;
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 640px;
+  }
+  .hero-meta {
+    margin-top: 36px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+  .hero-meta strong { color: var(--text); font-weight: 500; }
+  .hero-links {
+    margin-top: 32px;
+    display: flex;
+    gap: 12px;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: border-color .15s, color .15s;
+  }
+  .btn:hover { border-color: var(--teal-dim); color: var(--teal); text-decoration: none; }
+  .btn.primary { background: var(--teal); color: #0B0E14; border-color: var(--teal); font-weight: 500; }
+  .btn.primary:hover { background: var(--teal-dim); color: #0B0E14; }
+
+  /* ---------- PIPELINE RAIL ---------- */
+  section.rail {
+    padding: 56px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rail-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 24px;
+  }
+  .rail-track {
+    display: flex;
+    overflow-x: auto;
+    gap: 0;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+  .rail-node {
+    flex: 0 0 auto;
+    width: 132px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    padding-right: 20px;
+  }
+  .rail-node:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 13px;
+    right: 0;
+    width: 20px;
+    height: 1px;
+    background: var(--border);
+  }
+  .rail-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--bg);
+    background: var(--text-faint);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .rail-node.active .rail-num { background: var(--teal); }
+  .rail-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .rail-node a.rail-title:hover { text-decoration: none; color: var(--teal); }
+  .rail-desc {
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.4;
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section.block {
+    padding: 64px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .block-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .block-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--teal);
+  }
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .lede { color: var(--text-dim); max-width: 680px; margin-bottom: 28px; font-size: 15px; }
+
+  /* metric table styled like terminal output */
+  .term-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .term-table .row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .term-table .row:last-child { border-bottom: none; }
+  .term-table .row.head { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: var(--surface-2); }
+  .term-table .row.winner { background: rgba(94,234,212,0.06); }
+  .term-table .row.winner .cell:first-child { color: var(--teal); }
+  .term-table .cell.num { color: var(--text-dim); }
+  .term-table .row.winner .cell.num { color: var(--text); }
+
+  .severity-table .row { grid-template-columns: 1.6fr 1fr 1fr; }
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .tag.severe { background: rgba(248,113,113,0.12); color: var(--red); }
+  .tag.moderate { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .tag.ok { background: rgba(94,234,212,0.1); color: var(--teal); }
+  .tag.pass { background: rgba(94,234,212,0.1); color: var(--teal); }
+
+  .plot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .plot-frame {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .plot-frame .plot-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .plot-frame img {
+    width: 100%;
+    display: block;
+  }
+  .plot-frame .placeholder {
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: center;
+    padding: 16px;
+  }
+
+  .callout {
+    background: var(--surface);
+    border-left: 2px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 20px 0;
+  }
+  .callout strong { color: var(--amber); font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+
+  .insight {
+    background: var(--surface);
+    border-left: 2px solid var(--teal);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 20px 0;
+  }
+  .insight strong { color: var(--teal); font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+
+  .feature-list {
+    list-style: none;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .feature-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .feature-list .bar-wrap { flex: 1; margin: 0 16px; background: var(--surface-2); border-radius: 3px; height: 6px; align-self: center; overflow: hidden; }
+  .feature-list .bar { height: 100%; background: var(--teal-dim); }
+  .feature-list .val { color: var(--text); min-width: 50px; text-align: right; }
+
+  .decision-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .decision-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .decision-card .d-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .decision-card p { font-size: 13px; color: var(--text-dim); }
+
+  footer {
+    padding: 48px 0 80px;
+    text-align: center;
+  }
+  footer .stack {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+  footer a { color: var(--text-dim); margin: 0 10px; }
+  footer a:hover { color: var(--teal); }
+
+  @media (max-width: 640px) {
+    header.hero { padding: 64px 0 48px; }
+    .term-table .row { grid-template-columns: 1.4fr 1fr 1fr; font-size: 12px; }
+    .term-table .row .cell:nth-child(4) { display: none; }
+    .term-table .row.head .cell:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">production ml · portfolio project</div>
+    <h1>Customer churn, built the way a production ML team would ship it.</h1>
+    <p class="hero-sub">
+      Not just a churn model — the full lifecycle around it: tracked experiments,
+      a validation gate, explainability, drift monitoring, and an automatic
+      retrain that actually proves itself before promotion.
+    </p>
+    <div class="hero-meta">
+      <span><strong>7,043</strong> customers</span>
+      <span><strong>4</strong> models compared</span>
+      <span><strong>0.851</strong> best val ROC-AUC</span>
+      <span><strong>7</strong> notebooks, 1 scheduled job</span>
+    </div>
+    <div class="hero-links">
+      <a class="btn primary" href="https://github.com/Ajay-Deshpande/churn-ops" target="_blank">View on GitHub ↗</a>
+      <a class="btn" href="#pipeline">See the pipeline ↓</a>
+    </div>
+  </header>
+
+  <section class="rail" id="pipeline">
+    <div class="rail-label">the pipeline</div>
+    <div class="rail-track">
+      <div class="rail-node active">
+        <div class="rail-num">01</div>
+        <a class="rail-title" href="#ingestion">Ingestion</a>
+        <div class="rail-desc">Kaggle → Delta, schema validation</div>
+      </div>
+      <div class="rail-node active">
+        <div class="rail-num">02</div>
+        <a class="rail-title" href="#features">Features</a>
+        <div class="rail-desc">5 engineered signals, stratified split</div>
+      </div>
+      <div class="rail-node active">
+        <div class="rail-num">03</div>
+        <a class="rail-title" href="#training">Training</a>
+        <div class="rail-desc">4 models, MLflow tracked</div>
+      </div>
+      <div class="rail-node active">
+        <div class="rail-num">04</div>
+        <a class="rail-title" href="#registry">Registry</a>
+        <div class="rail-desc">Test-set gate, champion promotion</div>
+      </div>
+      <div class="rail-node active">
+        <div class="rail-num">05</div>
+        <a class="rail-title" href="#shap">SHAP</a>
+        <div class="rail-desc">Global + per-customer explanations</div>
+      </div>
+      <div class="rail-node active">
+        <div class="rail-num">06</div>
+        <a class="rail-title" href="#drift">Drift</a>
+        <div class="rail-desc">PSI/KS monitoring, auto-retrain</div>
+      </div>
+      <div class="rail-node active">
+        <div class="rail-num">07</div>
+        <a class="rail-title" href="#scoring">Scoring</a>
+        <div class="rail-desc">Risk tiers, scheduled job</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="ingestion">
+    <div class="block-head"><span class="block-num">01 / 02</span><h2>Ingestion &amp; feature engineering</h2></div>
+    <p class="lede">
+      The <a href="https://www.kaggle.com/datasets/blastchar/telco-customer-churn" target="_blank">IBM Telco Churn</a>
+      dataset (7,043 customers, 26.5% churn rate) loaded via Delta Lake with schema and null-rate
+      validation logged to MLflow for lineage. Five engineered features sit on top of the raw columns —
+      tenure buckets, ordinal contract encoding, an add-on engagement count, and a charge-increase ratio
+      that flags recent price hikes, a known churn trigger.
+    </p>
+    <div class="callout">
+      <strong>why one dataset, not two</strong>
+      A second real telecom dataset was evaluated for drift detection, but only ~7 features mapped
+      cleanly across both schemas — dropping the strongest predictors and cutting expected AUC from
+      ~0.84 to ~0.70. Drift detection instead uses synthetic injection (see section 06), the same
+      pattern used by Evidently AI and Databricks' own MLOps references.
+    </div>
+  </section>
+
+  <section class="block" id="training">
+    <div class="block-head"><span class="block-num">03</span><h2>Training &amp; experiment tracking</h2></div>
+    <p class="lede">
+      Four model families — Logistic Regression, Random Forest, XGBoost, LightGBM — each tuned via
+      <code>RandomizedSearchCV</code> (3-fold stratified CV, 20 iterations) and logged to MLflow with
+      full hyperparameters, metrics, and artifacts.
+    </p>
+    <div class="term-table">
+      <div class="row head"><div class="cell">model</div><div class="cell">val roc-auc</div><div class="cell">val pr-auc</div><div class="cell">val f1</div></div>
+      <div class="row winner"><div class="cell">lightgbm</div><div class="cell num">0.8510</div><div class="cell num">0.6515</div><div class="cell num">0.6387</div></div>
+      <div class="row"><div class="cell">xgboost</div><div class="cell num">0.8480</div><div class="cell num">0.6431</div><div class="cell num">0.6420</div></div>
+      <div class="row"><div class="cell">logistic_regression</div><div class="cell num">0.8470</div><div class="cell num">0.6338</div><div class="cell num">0.6178</div></div>
+      <div class="row"><div class="cell">random_forest</div><div class="cell num">0.8448</div><div class="cell num">0.6417</div><div class="cell num">0.6374</div></div>
+    </div>
+    <div class="plot-grid">
+      <div class="plot-frame">
+        <div class="plot-label">assets/plots/eda/model_comparison_roc_auc.png</div>
+        <img src="assets/plots/eda/model_comparison_roc_auc.png" alt="Model comparison bar chart" onerror="this.parentElement.innerHTML='<div class=placeholder>model_comparison_roc_auc.png</div>'">
+      </div>
+      <div class="plot-frame">
+        <div class="plot-label">assets/plots/eda/lightgbm_roc_curve.png</div>
+        <img src="assets/plots/eda/lightgbm_roc_curve.png" alt="LightGBM ROC curve" onerror="this.parentElement.innerHTML='<div class=placeholder>lightgbm_roc_curve.png</div>'">
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="registry">
+    <div class="block-head"><span class="block-num">04</span><h2>Model registry &amp; validation gate</h2></div>
+    <p class="lede">
+      The best run is found by querying the MLflow experiment directly — not reused from an in-memory
+      variable — mirroring how a real promotion stage runs independently of training. Before promotion,
+      the model is scored on the held-out test set for the first and only time, gated at
+      <code>test_roc_auc ≥ 0.80</code>.
+    </p>
+    <div class="term-table">
+      <div class="row head"><div class="cell">stage</div><div class="cell">metric</div><div class="cell">value</div><div class="cell">result</div></div>
+      <div class="row"><div class="cell">champion (lightgbm)</div><div class="cell">test_roc_auc</div><div class="cell num">0.8373</div><div class="cell"><span class="tag pass">PASS</span></div></div>
+    </div>
+    <div class="callout">
+      <strong>infra note</strong>
+      This workspace's legacy model registry is disabled, and Unity Catalog registration hit an S3
+      write-permission wall on free-tier storage — outside what's configurable from notebook code.
+      UC registration code is included as reference; the working pipeline uses a stable
+      <code>runs:/&lt;run_id&gt;/model</code> URI as the champion reference, with identical
+      validation-gate and promotion logic.
+    </div>
+  </section>
+
+  <section class="block" id="shap">
+    <div class="block-head"><span class="block-num">05</span><h2>SHAP explainability</h2></div>
+    <p class="lede">
+      <code>TreeExplainer</code> gives exact, signed, per-prediction contributions — not just
+      "tenure matters" but why a specific customer was flagged, and which direction each feature pushed.
+    </p>
+    <ul class="feature-list">
+      <li><span>contract_encoded</span><div class="bar-wrap"><div class="bar" style="width:100%"></div></div><span class="val">0.776</span></li>
+      <li><span>tenure</span><div class="bar-wrap"><div class="bar" style="width:48%"></div></div><span class="val">0.376</span></li>
+      <li><span>OnlineSecurity_No</span><div class="bar-wrap"><div class="bar" style="width:32%"></div></div><span class="val">0.250</span></li>
+      <li><span>InternetService_Fiber optic</span><div class="bar-wrap"><div class="bar" style="width:23%"></div></div><span class="val">0.177</span></li>
+      <li><span>TechSupport_No</span><div class="bar-wrap"><div class="bar" style="width:22%"></div></div><span class="val">0.170</span></li>
+      <li><span>PaymentMethod_Electronic check</span><div class="bar-wrap"><div class="bar" style="width:21%"></div></div><span class="val">0.162</span></li>
+    </ul>
+    <div class="insight">
+      <strong>headline insight</strong>
+      The top two features alone outweigh the next six combined. A retention strategy targeting
+      <em>new, month-to-month customers</em> addresses both dominant churn drivers at once.
+    </div>
+    <div class="plot-grid">
+      <div class="plot-frame">
+        <div class="plot-label">assets/plots/shap/shap_beeswarm_global.png</div>
+        <img src="assets/plots/shap/shap_beeswarm_global.png" alt="SHAP beeswarm plot" onerror="this.parentElement.innerHTML='<div class=placeholder>shap_beeswarm_global.png</div>'">
+      </div>
+      <div class="plot-frame">
+        <div class="plot-label">assets/plots/shap/shap_waterfall_high_risk.png</div>
+        <img src="assets/plots/shap/shap_waterfall_high_risk.png" alt="SHAP waterfall, high risk customer" onerror="this.parentElement.innerHTML='<div class=placeholder>shap_waterfall_high_risk.png</div>'">
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="drift">
+    <div class="block-head"><span class="block-num">06</span><h2>Drift detection &amp; auto-retrain</h2></div>
+    <p class="lede">
+      A synthetic "six months later" scenario — a 15% price increase, a promo-driven younger tenure
+      mix, and a shift toward month-to-month contracts — injected to test whether the monitoring
+      pipeline actually catches it.
+    </p>
+    <div class="term-table severity-table">
+      <div class="row head"><div class="cell">feature</div><div class="cell">psi</div><div class="cell">flag</div></div>
+      <div class="row"><div class="cell">charge_increase_ratio</div><div class="cell num">4.330</div><div class="cell"><span class="tag severe">SEVERE</span></div></div>
+      <div class="row"><div class="cell">MonthlyCharges</div><div class="cell num">1.009</div><div class="cell"><span class="tag severe">SEVERE</span></div></div>
+      <div class="row"><div class="cell">tenure</div><div class="cell num">0.192</div><div class="cell"><span class="tag moderate">MODERATE</span></div></div>
+      <div class="row"><div class="cell">contract_encoded</div><div class="cell num">0.058</div><div class="cell"><span class="tag ok">OK</span></div></div>
+    </div>
+    <p class="lede" style="margin-top: 24px;">PSI correctly triggered an automatic retrain. v2 was trained on the combined original + drifted data:</p>
+    <div class="term-table">
+      <div class="row head"><div class="cell">model</div><div class="cell">roc-auc · reference test</div><div class="cell">roc-auc · drift batch</div></div>
+      <div class="row"><div class="cell">v1 (pre-drift)</div><div class="cell num">0.8373</div><div class="cell num">0.8469</div></div>
+      <div class="row winner"><div class="cell">v2 (retrained)</div><div class="cell num">0.8375</div><div class="cell num">0.9327</div></div>
+    </div>
+    <div class="insight">
+      <strong>result</strong>
+      v2 gained +0.086 ROC-AUC on the drifted population with zero regression on the original test
+      set — the signature of a successful retrain — and was promoted to champion automatically.
+    </div>
+    <div class="plot-grid">
+      <div class="plot-frame">
+        <div class="plot-label">assets/plots/drift/drift_report.png</div>
+        <img src="assets/plots/drift/drift_report.png" alt="Drift report histograms" onerror="this.parentElement.innerHTML='<div class=placeholder>drift_report.png</div>'">
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="scoring">
+    <div class="block-head"><span class="block-num">07</span><h2>Batch scoring</h2></div>
+    <p class="lede">
+      Reads the champion pointer fresh on every run — no code change needed after a retrain promotes
+      a new champion. Scores customers, assigns risk tiers, and appends to Delta with full lineage
+      (<code>model_run_id</code>, <code>scored_at</code>) for auditability. This notebook is the
+      scheduled job task, configured for a daily 6am run and currently paused.
+    </p>
+  </section>
+
+  <section class="block" style="border-bottom: none;">
+    <div class="block-head"><span class="block-num">design</span><h2>Key decisions</h2></div>
+    <div class="decision-grid">
+      <div class="decision-card">
+        <div class="d-title">sklearn over Spark ML</div>
+        <p>7K rows fits comfortably in pandas; SHAP's mature tooling targets sklearn directly. Spark handles ingestion and feature engineering at scale instead.</p>
+      </div>
+      <div class="decision-card">
+        <div class="d-title">manual MLflow logging</div>
+        <p>Autolog is demoed for fast exploration, but the systematic comparison uses manual logging for consistent metric names and custom artifacts across model families.</p>
+      </div>
+      <div class="decision-card">
+        <div class="d-title">synthetic drift injection</div>
+        <p>Preserves the full, high-signal feature set for modeling while still exercising a genuine, working drift-detection and retrain pipeline.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="stack">databricks · delta lake · mlflow · scikit-learn · xgboost · lightgbm · shap · pyspark</div>
+    <a href="https://github.com/Ajay-Deshpande/churn-ops" target="_blank">GitHub ↗</a>
+    <a href="#pipeline">Back to top ↑</a>
+  </footer>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Core ML
+scikit-learn=1.9.0
+xgboost>=2.0.0
+lightgbm>=4.3.0
+ 
+# Experiment tracking & registry
+mlflow>=2.12.0
+ 
+# Explainability
+shap>=0.45.0
+ 
+# Data handling
+pandas>=2.0.0
+numpy>=1.26.0
+pyspark>=3.5.0
+ 
+# Stats (drift detection: KS test)
+scipy>=1.12.0
+ 
+# Visualization
+matplotlib>=3.8.0
+ 
+# Data download
+kagglehub>=0.2.0
+ 
+# Note: pyspark, mlflow, and a recent pandas/numpy are pre-installed on
+# Databricks Runtime 15.x+ ML clusters. This file is primarily for
+# reproducing the environment outside Databricks (e.g. local dev, CI)
+# or pinning exact versions if the cluster's default versions drift.
+ 
