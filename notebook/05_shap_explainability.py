@@ -48,6 +48,7 @@ import json
 import shap
 import matplotlib.pyplot as plt
 
+mlflow.set_registry_uri("databricks-uc")
 mlflow.set_experiment("/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/05_shap_explainability")
 
 DB_NAME = "churn"

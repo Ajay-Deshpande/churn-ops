@@ -44,7 +44,7 @@ import json
 from pyspark.sql import functions as F
 from datetime import datetime
 
-mlflow.set_registry_uri('uc-databricks')
+mlflow.set_registry_uri("databricks-uc")
 mlflow.set_experiment("/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/07_batch_scoring")
 
 DB_NAME = "churn"

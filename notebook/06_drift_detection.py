@@ -61,7 +61,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, pr
 from scipy.stats import randint, uniform, loguniform
 from lightgbm import LGBMClassifier
 
-mlflow.set_registry_uri("uc-databricks")
+mlflow.set_registry_uri("databricks-uc")
 mlflow.set_experiment("/Workspace/Users/deshpande.ajay.us@gmail.com/churn-ops/06_drift_detection")
 
 DB_NAME = "churn"
